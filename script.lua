@@ -1,5 +1,5 @@
 -- (Creator = Thanh Phuc)
--- 💟 Thanh Phuc - Chroma Boombox Cầu Vồng Đeo Chéo + Nháy Theo Nhạc (Visualizer) 💟
+-- 💟 Thanh Phuc - Chroma Boombox Cầu Vồng Gọn Đẹp + Nhịp Sóng Nhạc Dải Neon Dính Khớp 💟
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -12,12 +12,11 @@ LocalSound.Parent = LocalPlayer:WaitForChild("PlayerWorkspace", 5) or workspace
 LocalSound.Volume = 2
 LocalSound.Looped = true
 
--- TẠO CHROMA BOOMBOX ĐEO CHÉO ẢO + SÓNG NHẠC VISUALIZER
-local FakeBoombox = nil
+-- TẠO CHROMA BOOMBOX ĐEO CHÉO ẢO + SÓNG NHẠC VISUALIZER DÍNH KHỚP
+local FakeBoomboxModel = nil
 local VisualizerBars = {}
-
 local function CreateFakeBoombox()
-    if FakeBoombox then FakeBoombox:Destroy() end
+    if FakeBoomboxModel then FakeBoomboxModel:Destroy() end
     for _, bar in pairs(VisualizerBars) do if bar then bar:Destroy() end end
     VisualizerBars = {}
     
@@ -25,81 +24,87 @@ local function CreateFakeBoombox()
     if not character or not character:FindFirstChild("UpperTorso") and not character:FindFirstChild("Torso") then return end
     local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
     
-    -- Khởi tạo Mesh chuẩn Chroma Boombox (Dáng dẹp, gọn)
-    FakeBoombox = Instance.new("SpecialMesh")
-    FakeBoombox.MeshId = "rbxassetid://212641536" -- ID Mesh dáng boombox dẹp gọn
-    FakeBoombox.TextureId = "rbxassetid://212641550" -- Texture gốc để phủ màu Neon
-    
+    -- Tạo một Model để nhóm Boombox và Sóng nhạc
+    FakeBoomboxModel = Instance.new("Model")
+    FakeBoomboxModel.Name = "ThanhPhucBoomboxSystem"
+    FakeBoomboxModel.Parent = character
+
+    -- 1. Thân Boombox Cầu Vồng
     local part = Instance.new("Part")
-    part.Name = "ThanhPhucChromaBoombox"
-    part.Size = Vector3.new(1.8, 1.2, 0.4) -- Thu hẹp bề ngang cực kỳ gọn
+    part.Name = "BoomboxBody"
+    part.Size = Vector3.new(1.8, 1.2, 0.4)
     part.CanCollide = false
     part.Massless = true
-    FakeBoombox.Parent = part
-    part.Parent = character
+    part.Parent = FakeBoomboxModel
     
-    -- Gắn và Xoay Xéo như đeo Balo Quai Chéo
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshId = "rbxassetid://212641536"
+    mesh.TextureId = "rbxassetid://212641550"
+    mesh.Parent = part
+    
+    -- Gắn Boombox vào Lưng (như quai chéo)
     local weld = Instance.new("Weld")
     weld.Part0 = torso
     weld.Part1 = part
     weld.C0 = CFrame.new(0, -0.2, 0.65) * CFrame.Angles(0, math.rad(180), math.rad(25))
     weld.Parent = part
     
-    -- TẠO CÁC THANH SÓNG NHẠC (VISUALIZER BARS) THEO ẢNH 1000056606.jpg
-    local barCount = 5 -- Số lượng thanh sóng nhạc trên đỉnh loa
+    -- 2. Dải Sóng Nhạc Neon (Visualizer Bars) - CHỈNH VỊ TRÍ DÍNH KHỚP
+    local barCount = 10 -- Số lượng thanh sóng nhạc (nhiều hơn cho giống ảnh)
     local barWidth = 1.6 / barCount
-    
+    local barDepth = part.Size.Z - 0.05 -- Chiều sâu gần bằng thân loa
+
+    -- Vị trí trục Z (phía trước dải sóng nhạc) dính khớp với bề mặt trước của Boombox
+    local zOffset = -0.19 
+
     for i = 1, barCount do
         local bar = Instance.new("Part")
         bar.Name = "VisualizerBar" .. i
         bar.Material = Enum.Material.Neon
-        varSize = Vector3.new(barWidth - 0.05, 0.1, 0.2)
-        bar.Size = varSize
+        -- Chiều cao ban đầu thấp nhất, dính chặt
+        bar.Size = Vector3.new(barWidth - 0.02, 0.05, barDepth) 
         bar.CanCollide = false
         bar.Massless = true
-        bar.Parent = character
+        bar.Transparency = 0.2 -- Hơi trong suốt một chút cho giống hiệu ứng dải neon
+        bar.Parent = FakeBoomboxModel
         
         local barWeld = Instance.new("Weld")
         barWeld.Part0 = part
         barWeld.Part1 = bar
-        -- Xếp hàng ngang trên đỉnh của Boombox
-        local xOffset = -0.8 + (i - 0.5) * barWidth
-        barWeld.C0 = CFrame.new(xOffset, 0.6, 0) 
+        -- Căn chỉnh dải sóng nhạc nằm trên đỉnh và sát bề mặt trước của thân Boombox
+        barWeld.C0 = CFrame.new(-0.8 + (i - 0.5) * barWidth, 0.6, zOffset)
         barWeld.Parent = bar
         
         table.insert(VisualizerBars, {Part = bar, Weld = barWeld, Index = i})
     end
     
-    -- Hiệu ứng chạy màu cầu vồng + Nhảy sóng theo nhịp âm thanh (PlaybackLoudness)
+    -- Hiệu ứng chạy màu cầu vồng + Nhảy sóng theo nhịp âm thanh (dính khớp)
     coroutine.wrap(function()
         local hue = 0
         while part and part.Parent do
-            -- Lấy độ lớn âm thanh hiện tại (Thường từ 0 đến khoảng 300-400)
             local loudness = LocalSound.PlaybackLoudness
-            local normLoudness = math.clamp(loudness / 300, 0, 1.5) -- Chuẩn hóa tỷ lệ nhạc
+            local normLoudness = math.clamp(loudness / 400, 0, 1.2) -- Chuẩn hóa tỷ lệ nhạc
             
-            -- 1. Tốc độ chuyển màu Cầu vồng sẽ chạy NHANH HƠN khi nhạc đập Bass mạnh
-            local speedMultiplier = 1 + (normLoudness * 4)
-            hue = (hue + (0.8 * speedMultiplier)) % 360 
-            
+            -- Màu sắc Cầu vồng (Chroma)
+            hue = (hue + 1.2) % 360 
             local mainColor = Color3.fromHSV(hue / 360, 1, 1)
             part.Color = mainColor
-            FakeBoombox.VertexColor = Vector3.new(mainColor.R, mainColor.G, mainColor.B)
+            mesh.VertexColor = Vector3.new(mainColor.R, mainColor.G, mainColor.B)
             
-            -- 2. Cập nhật các thanh sóng nhạc (Visualizer) nhấp nhô cao thấp theo ảnh 1000056606.jpg
+            -- Cập nhật dải sóng nhạc dính khớp theo beat
             for _, item in pairs(VisualizerBars) do
                 if item.Part and item.Part.Parent then
-                    -- Tạo độ nhấp nhô khác nhau một chút giữa các cột cho đẹp mắt
-                    local waveFactor = math.sin(tick() * 10 + item.Index) * 0.2
-                    local targetHeight = math.clamp((normLoudness * 1.2) + waveFactor, 0.1, 1.5)
+                    -- Tạo độ nhấp nhô sống động
+                    local waveFactor = math.sin(tick() * 15 + item.Index * 0.8) * 0.15
+                    local targetHeight = math.clamp((normLoudness * 0.9) + waveFactor + 0.1, 0.1, 0.7) -- Chiều cao vừa phải, không quá lố
                     
-                    -- Thay đổi chiều cao thanh nhạc sống động
-                    item.Part.Size = Vector3.new(item.Part.Size.X, targetHeight, item.Part.Size.Z)
-                    -- Điều chỉnh tâm Weld để thanh chỉ dài lên phía trên chứ không bị lún xuống dưới
-                    item.Weld.C0 = CFrame.new(-0.8 + (item.Index - 0.5) * barWidth, 0.6 + (targetHeight / 2), 0)
+                    -- Thay đổi chiều cao thanh nhạc (chỉ dài lên trên)
+                    item.Part.Size = Vector3.new(item.Part.Size.X, targetHeight, barDepth)
+                    -- Điều chỉnh vị trí tâm để dính chặt bề mặt
+                    item.Weld.C0 = CFrame.new(-0.8 + (item.Index - 0.5) * barWidth, 0.6 + (targetHeight / 2), zOffset)
                     
-                    -- Đổi màu thanh sóng nhạc theo dải màu cầu vồng lệch nhịp cực đẹp
-                    local barHue = (hue + (item.Index * 15)) % 360
+                    -- Đổi màu neon dải sóng nhạc cùng tông màu dải
+                    local barHue = (hue + (item.Index * 5)) % 360
                     item.Part.Color = Color3.fromHSV(barHue / 360, 1, 1)
                 end
             end
@@ -189,8 +194,8 @@ PlayBtn.MouseButton1Click:Connect(function()
         LocalSound.SoundId = "rbxassetid://" .. cleanID
         LocalSound:Play()
         
-        CreateFakeBoombox() -- Tạo mẫu loa quai chéo cầu vồng tích hợp sóng nhạc nhảy theo beat
-        print("Thanh Phuc đã bật nhạc + Đeo xéo Chroma Boombox cảm ứng sóng nhạc!")
+        CreateFakeBoombox() -- Tạo mẫu loa quai chéo cầu vồng tích hợp sóng nhạc dính khớp!
+        print("Thanh Phuc đã bật nhạc + Đeo xéo Boombox tích hợp sóng nhạc khớp!")
     else
         InputBox.Text = ""
         InputBox.PlaceholderText = "ID không hợp lệ!"
